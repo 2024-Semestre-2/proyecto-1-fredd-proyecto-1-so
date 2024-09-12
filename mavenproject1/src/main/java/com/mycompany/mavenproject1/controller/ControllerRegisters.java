@@ -36,14 +36,14 @@ public class ControllerRegisters implements ActionListener {
     }
     
     public void handleMoveExec() {
-        model.executionProgram();
+        model.executionProgramSteps();
         checkRegisters();
         view.pcRegister.setText(String.valueOf(model.getActualInstruc()));
         view.irRegister.setText(String.valueOf(model.getActualInstrucString()));
     }
     
     public void handleStartExecution() {
-        model.executionProgram();
+        model.executionProgramSteps();
         checkRegisters();
         view.pcRegister.setText(String.valueOf(model.getActualInstruc()));
         view.irRegister.setText(String.valueOf(model.getActualInstrucString()));

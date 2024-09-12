@@ -1,8 +1,10 @@
 
 package com.mycompany.mavenproject1.model;
 
+import com.mycompany.Bslogic.Dispatcher;
 import com.mycompany.Bslogic.Instruction;
 import com.mycompany.Bslogic.Memory;
+import com.mycompany.Bslogic.PCB;
 import com.mycompany.Bslogic.Register;
 import java.util.ArrayList;
 
@@ -11,39 +13,31 @@ import java.util.ArrayList;
  * @author fredd
  */
 public class Model{
-    ArrayList<String> lines = new ArrayList<>();
     int memorySize = 100;
     int userMemStart = 20;
     String actualInstrucString = "";
     Memory memory = new Memory(memorySize, 0, userMemStart);
     int actualInstruc = memory.getIndexUser();
-    Register AX = new Register("AX", "");
-    Register BX = new Register("BX", "");
-    Register CX = new Register("CX", "");
-    Register DX = new Register("DX", "");
-    Register AC = new Register("AC", "");
+    Register AX = new Register("AX", "0");
+    Register BX = new Register("BX", "0");
+    Register CX = new Register("CX", "0");
+    Register DX = new Register("DX", "0");
+    Register AC = new Register("AC", "0");
+    
+    Dispatcher dispatcher = new Dispatcher();
+    
+    PCB actualPCB;
 
     
     public Model() {
         
     }
-
-    public ArrayList<String> getLines() {
-        return lines;
-    }
-
-    public void setLines(ArrayList<String> lines) {
-        this.lines = lines;
-    }
     
-    public void printLines() {
-        System.out.println(this.lines);
-    }
     
     public Instruction[] convertLinesToIns() {
-        Instruction[] insProv = new Instruction[lines.size()];
+        Instruction[] insProv = new Instruction[actualPCB.getLines().size()];
         int index = 0;
-        for (String line: lines) {
+        for (String line: actualPCB.getLines()) {
             insProv[index] = new Instruction(line);
             index++;
         }
@@ -53,11 +47,11 @@ public class Model{
     public void setUserInsToMemo() {
         Instruction[] insProv = convertLinesToIns();
         memory = new Memory(memorySize, 0, userMemStart);
-        AX.setValue(null); 
-        BX.setValue(null); 
-        CX.setValue(null); 
-        DX.setValue(null); 
-        AC.setValue(null); 
+        AX.setValue("0"); 
+        BX.setValue("0"); 
+        CX.setValue("0"); 
+        DX.setValue("0"); 
+        AC.setValue("0"); 
         Instruction[] actualIns = memory.getMemoryInstrucs();
         int actualInd = memory.getActualIndexUser();
         
@@ -84,7 +78,7 @@ public class Model{
     }
     
     
-    public void executionProgram() {
+    public void executionProgramSteps() {
         
         if (actualInstruc < memory.getActualIndexUser()) {
             Instruction tempIns = memory.getMemoryInstrucs()[actualInstruc];
@@ -98,6 +92,12 @@ public class Model{
             }
             actualInstruc++;
         }
+        
+        actualPCB.setAC(AC);
+        actualPCB.setAX(AX);
+        actualPCB.setBX(BX);
+        actualPCB.setCX(CX);
+        actualPCB.setDX(DX);
     }
     
     public void setToMemorySimp(Instruction ins) {
@@ -203,24 +203,50 @@ public class Model{
         return false;
     }
 
-    public Register getAX() {
-        return AX;
+    
+    
+    
+    
+    //ignore
+    public void printLines() {
+        System.out.println(this.actualPCB.getLines());
+    }
+    
+    public void setUserMemStart(int userMemStart) {
+        this.userMemStart = userMemStart;
+        memory = new Memory(memorySize, 0, userMemStart);
+    }
+    
+    public void restart() {
+        AX.setValue("0"); 
+        BX.setValue("0"); 
+        CX.setValue("0"); 
+        DX.setValue("0"); 
+        AC.setValue("0"); 
+        
+        actualInstrucString = "";
     }
 
+    
+    //Getters and setters
+    public Register getAX() {
+        return actualPCB.getAX();
+    }
+    
     public Register getBX() {
-        return BX;
+        return actualPCB.getBX();
     }
 
     public Register getCX() {
-        return CX;
+        return actualPCB.getCX();
     }
 
     public Register getDX() {
-        return DX;
+        return actualPCB.getDX();
     }
 
     public Register getAC() {
-        return AC;
+        return actualPCB.getAC();
     }
 
     public Memory getMemory() {
@@ -235,11 +261,6 @@ public class Model{
         this.memorySize = memorySize;
     }
 
-    public void setUserMemStart(int userMemStart) {
-        this.userMemStart = userMemStart;
-        memory = new Memory(memorySize, 0, userMemStart);
-    }
-
     public int getActualInstruc() {
         return actualInstruc;
     }
@@ -248,5 +269,20 @@ public class Model{
         return actualInstrucString;
     }
     
+    public PCB getActualPCB() {
+        return actualPCB;
+    }
+
+    public void setActualPCB(PCB actualPCB) {
+        this.actualPCB = actualPCB;
+    }
+    
+    public void setLines(ArrayList<String> lines) {
+        this.actualPCB.setLines(lines);
+    }
+
+    public Dispatcher getDispatcher() {
+        return dispatcher;
+    }
     
 }

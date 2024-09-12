@@ -39,6 +39,7 @@ public class ControllerLoadFile implements ActionListener {
 
         if (source == view.loadFile) {
             handleLoadFile();
+            prepareExec();
         }
         else {
             System.out.println("Event unknown.");
@@ -47,38 +48,62 @@ public class ControllerLoadFile implements ActionListener {
     
     public void handleLoadFile() {
         JFileChooser fileChooser = new JFileChooser();
-        ArrayList<String> lines = new ArrayList<>();
-        view.moveExecution.setEnabled(false);
-        cleanRegisters();
-        String text = "";
-        
+        view.moveExecution.setEnabled(false); // Asegúrate de que esta línea está dentro de un contexto adecuado
+        cleanRegisters(); // Asegúrate de que esta línea está dentro de un contexto adecuado
+
+        // Habilitar selección múltiple de archivos
+        fileChooser.setMultiSelectionEnabled(true);
+
         int returnValue = fileChooser.showOpenDialog(null);
 
-       
         if (returnValue == JFileChooser.APPROVE_OPTION) {
+            // Obtener los archivos seleccionados
+            File[] selectedFiles = fileChooser.getSelectedFiles();
             
-            File selectedFile = fileChooser.getSelectedFile();
-            System.out.println("File selected: " + selectedFile.getAbsolutePath());
-
-            
-            try (BufferedReader reader = new BufferedReader(new FileReader(selectedFile))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    lines.add(line);
-                    text = text + "\n" + line;
-                }
-            } catch (IOException e) {
-                e.printStackTrace(); 
+            for (File selectedFile : selectedFiles) {
+                //This is meanwhile validations are created
+                model.getDispatcher().createPCB(getELementsOfFile(selectedFile));
             }
         } else {
             System.out.println("No file found.");
         }
         
-        model.setLines(lines);
+    }
+    
+    public void prepareExec() {
+        model.setActualPCB(model.getDispatcher().getAllProcesses().get(0));
         model.setUserInsToMemo();
         writeBlockMemory();
         view.startExecution.setEnabled(true);
-        view.codeArea.setText(text);
+        view.codeArea.setText(getText(model.getDispatcher().getAllProcesses().get(0).getLines()));
+    }
+    
+    public ArrayList<String> getELementsOfFile(File selectedFile) {
+        System.out.println("File selected: " + selectedFile.getAbsolutePath());
+        ArrayList<String> lines = new ArrayList<>();
+        
+
+        // Leer cada archivo seleccionado
+        try (BufferedReader reader = new BufferedReader(new FileReader(selectedFile))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                lines.add(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        
+        return lines;
+    }
+    
+    public String getText(ArrayList<String> lines) {
+        String text = "";
+        
+        for (String line : lines) {
+            text = text + "\n" + line;
+        }
+        
+        return text;
     }
     
     public void cleanRegisters() {
