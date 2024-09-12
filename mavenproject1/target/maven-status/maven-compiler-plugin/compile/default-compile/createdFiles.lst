@@ -1,0 +1,10 @@
+com\mycompany\Bslogic\Memory.class
+com\mycompany\mavenproject1\controller\ControllerBlockMemory.class
+com\mycompany\Bslogic\Instruction.class
+com\mycompany\mavenproject1\model\Model.class
+com\mycompany\Bslogic\Register.class
+com\mycompany\mavenproject1\controller\ControllerLoadFile.class
+com\mycompany\mavenproject1\controller\ControllerRegisters.class
+com\mycompany\Bslogic\Main.class
+com\mycompany\mavenproject1\view\App.class
+com\mycompany\mavenproject1\view\App$1.class
