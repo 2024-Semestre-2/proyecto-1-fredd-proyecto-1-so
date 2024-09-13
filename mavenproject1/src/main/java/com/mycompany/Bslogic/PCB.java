@@ -13,12 +13,16 @@ public class PCB {
     private Register DX = new Register("DX", "0");
     private Register AC = new Register("AC", "0");
     
-    private String state = "prepared";
+    private String state = "New";
     
-    private ArrayList<String> stack = new ArrayList<>();
+    private int PCBID = 0;
+    
+    private ArrayList<String> stack = new ArrayList<>(5);
     
     //Tiempo empleado y tiempo de inicio
     //Contador
+    
+    private String path = "";
     
     private String priority = "";
     
@@ -32,10 +36,26 @@ public class PCB {
     public PCB(ArrayList<String> lines) {
         this.lines = lines;
     }
+    
+
+    //Getters and setters
+    public int getPCBID() {
+        return PCBID;
+    }
 
     
+    public void setPCBID(int PCBID) {    
+        this.PCBID = PCBID;
+    }
+
+    public String getPath() {
+        return path;
+    }
+
+    public void setPath(String path) {
+        this.path = path;
+    }
     
-    //Getters and setters
     public Register getAX() {
         return AX;
     }

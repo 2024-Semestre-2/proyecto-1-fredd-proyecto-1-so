@@ -5,6 +5,11 @@ import com.mycompany.mavenproject1.model.Model;
 import com.mycompany.mavenproject1.view.App;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 
 /**
@@ -17,8 +22,8 @@ public class ControllerBlockMemory implements ActionListener {
     
     public ControllerBlockMemory(App view, Model model) {
         this.view = view;
+        view.setMemory.addActionListener(this);
         this.model = model;
-        view.setInput.addActionListener(this);
         initTextArea();
     }
     
@@ -41,7 +46,7 @@ public class ControllerBlockMemory implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         Object source = e.getSource();
 
-        if (source == view.setInput) {
+        if (source == view.setMemory) {
             handleInput();
         }
         else {
@@ -51,21 +56,33 @@ public class ControllerBlockMemory implements ActionListener {
     
     
     public void handleInput() {
-        String input1 = view.memoryInputSize.getText();
-        String input2 = view.memoryStartInput.getText();
+        String path = "C:\\Users\\fredd\\OneDrive\\Documentos\\GitHub\\proyecto-1-fredd-proyecto-1-so\\sizeMemory.txt"; 
+        String path2 = "C:\\Users\\fredd\\OneDrive\\Documentos\\GitHub\\proyecto-1-fredd-proyecto-1-so\\sizeStorage.txt"; 
         
-        if (!input1.matches("^-?\\d+$")) {
+        ArrayList<String> memoryConf = openFile(path);
+
+        try (BufferedReader br = new BufferedReader(new FileReader(path))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                System.out.println(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        
+        if (!memoryConf.get(0).matches("^-?\\d+$")) {
             JOptionPane.showMessageDialog(null, "Type an integer to the memory size", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
         
-        if (!input2.matches("^-?\\d+$")) {
+        if (!memoryConf.get(1).matches("^-?\\d+$")) {
             JOptionPane.showMessageDialog(null, "Type an integer to the start of the user memory", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
         
-        int number1 = Integer.parseInt(input1);
-        int number2 = Integer.parseInt(input2);
+        int number1 = Integer.parseInt(memoryConf.get(0));
+        int number2 = Integer.parseInt(memoryConf.get(1));
         
         if (number2 > number1) {
             JOptionPane.showMessageDialog(null, "The start of the memory can´t be higher than memory size", "Error", JOptionPane.ERROR_MESSAGE);
@@ -77,8 +94,6 @@ public class ControllerBlockMemory implements ActionListener {
         
         JOptionPane.showMessageDialog(null, "Memory changed successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
         initTextArea();
-        view.memoryInputSize.setText("");
-        view.memoryStartInput.setText("");
         cleanMemory();
     }
     
@@ -99,5 +114,20 @@ public class ControllerBlockMemory implements ActionListener {
         model.getDX().setValue(null);
         
         view.codeArea.setText("");
+    }
+    
+    public ArrayList<String> openFile(String path) {
+        ArrayList<String> temp = new ArrayList<String>();
+        
+        try (BufferedReader br = new BufferedReader(new FileReader(path))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                temp.add(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        
+        return temp;
     }
 }

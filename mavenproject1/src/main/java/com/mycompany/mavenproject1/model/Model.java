@@ -13,8 +13,8 @@ import java.util.ArrayList;
  * @author fredd
  */
 public class Model{
-    int memorySize = 100;
-    int userMemStart = 20;
+    int memorySize = 256;
+    int userMemStart = 40;
     String actualInstrucString = "";
     Memory memory = new Memory(memorySize, 0, userMemStart);
     int actualInstruc = memory.getIndexUser();
@@ -23,6 +23,8 @@ public class Model{
     Register CX = new Register("CX", "0");
     Register DX = new Register("DX", "0");
     Register AC = new Register("AC", "0");
+    
+    public boolean flagExec = false;
     
     Dispatcher dispatcher = new Dispatcher();
     
@@ -52,6 +54,7 @@ public class Model{
         CX.setValue("0"); 
         DX.setValue("0"); 
         AC.setValue("0"); 
+        actualInstrucString = "";
         Instruction[] actualIns = memory.getMemoryInstrucs();
         int actualInd = memory.getActualIndexUser();
         
@@ -91,13 +94,18 @@ public class Model{
                 setToMemoryComp(tempIns);
             }
             actualInstruc++;
+            
+            actualPCB.setAC(AC);
+            actualPCB.setAX(AX);
+            actualPCB.setBX(BX);
+            actualPCB.setCX(CX);
+            actualPCB.setDX(DX);
+        } else {
+            actualPCB.setState("Finished");
+            dispatcher.updatePCBS(actualPCB);
+            dispatcher.updateStates();
+            flagExec = false;
         }
-        
-        actualPCB.setAC(AC);
-        actualPCB.setAX(AX);
-        actualPCB.setBX(BX);
-        actualPCB.setCX(CX);
-        actualPCB.setDX(DX);
     }
     
     public void setToMemorySimp(Instruction ins) {
@@ -215,16 +223,6 @@ public class Model{
     public void setUserMemStart(int userMemStart) {
         this.userMemStart = userMemStart;
         memory = new Memory(memorySize, 0, userMemStart);
-    }
-    
-    public void restart() {
-        AX.setValue("0"); 
-        BX.setValue("0"); 
-        CX.setValue("0"); 
-        DX.setValue("0"); 
-        AC.setValue("0"); 
-        
-        actualInstrucString = "";
     }
 
     
