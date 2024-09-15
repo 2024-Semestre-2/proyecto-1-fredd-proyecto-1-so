@@ -26,15 +26,26 @@ public class Dispatcher {
     }
     
     public void updateStates() {
-        int i = 0;
         for (PCB temp : allProcesses) {
-            if (i < 5) {
-                if (!temp.getState().equals("Ready") && !temp.getState().equals("Finished")) {
-                    temp.setState("Ready");
-                    i++;
+            if (countR() < 5) {
+                if (!temp.getState().equals("Ready") && !temp.getState().equals("Finished") && !temp.getState().equals("Waiting") && !temp.getState().equals("Executing")) {
+                    temp.setState("Ready"); 
                 }
             }
         }
+    }
+    
+    public int countR() {
+        int count = 0;
+        for (PCB temp : allProcesses) {
+            
+            if (temp.getState().equals("Ready")) {
+                count++;
+            }
+            
+        }
+        
+        return count;
     }
     
     public void updatePCBS(PCB pcbTemp) {

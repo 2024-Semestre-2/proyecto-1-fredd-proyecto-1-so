@@ -17,7 +17,7 @@ public class PCB {
     
     private int PCBID = 0;
     
-    private ArrayList<String> stack = new ArrayList<>(5);
+    private ArrayList<String> stack = new ArrayList<>();
     
     //Tiempo empleado y tiempo de inicio
     //Contador
@@ -37,6 +37,13 @@ public class PCB {
         this.lines = lines;
     }
     
+    public void addToStack(String value) {
+        stack.add(value);
+    }
+    
+    public int getSizeStack() {
+        return stack.size();
+    }
 
     //Getters and setters
     public int getPCBID() {

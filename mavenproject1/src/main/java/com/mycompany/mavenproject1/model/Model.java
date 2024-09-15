@@ -6,6 +6,7 @@ import com.mycompany.Bslogic.Instruction;
 import com.mycompany.Bslogic.Memory;
 import com.mycompany.Bslogic.PCB;
 import com.mycompany.Bslogic.Register;
+import com.mycompany.Bslogic.Storage;
 import java.util.ArrayList;
 
 /**
@@ -25,10 +26,16 @@ public class Model{
     Register AC = new Register("AC", "0");
     
     public boolean flagExec = false;
+    public boolean flagInt10 = false;
+    public boolean flagInt09 = false;
+
     
     Dispatcher dispatcher = new Dispatcher();
     
     PCB actualPCB;
+    
+    //Storage section
+    private Storage actualStorage = new Storage(512, 64);
 
     
     public Model() {
@@ -81,7 +88,7 @@ public class Model{
     }
     
     
-    public void executionProgramSteps() {
+    public void executionProgramSteps() throws InterruptedException {
         
         if (actualInstruc < memory.getActualIndexUser()) {
             Instruction tempIns = memory.getMemoryInstrucs()[actualInstruc];
@@ -108,9 +115,13 @@ public class Model{
         }
     }
     
-    public void setToMemorySimp(Instruction ins) {
+    public void setToMemorySimp(Instruction ins) throws InterruptedException {
         String instruction = ins.getEachPartIns()[0].trim();
-        String value = ins.getEachPartIns()[1].trim();
+        String value = "";
+        if (ins.getEachPartIns().length > 1) {
+            value = ins.getEachPartIns()[1].trim();
+        }
+        
         String[] registerNames = {"AX", "BX", "CX", "DX"};
         String ACProvVal = "0";
         if (AC.getValue() != null) {
@@ -141,12 +152,103 @@ public class Model{
             } else {
                 AC.setValue(String.valueOf(Integer.parseInt(value) + Integer.parseInt(ACProvVal)));
             }
-        } else {
+        } else if (instruction.toUpperCase().equals("SUB")){
             if (searchElement(registerNames, value.toUpperCase())) {
                 AC.setValue(String.valueOf(Integer.parseInt(ACProvVal) - Integer.parseInt(getElemReg(value))));
             } else {
                 AC.setValue(String.valueOf(Integer.parseInt(ACProvVal) - Integer.parseInt(value)));
             } 
+        } else if (instruction.toUpperCase().equals("INC") && !value.equals("")) {
+            getReg(value).setValue(String.valueOf(Integer.parseInt(getReg(value).getValue()) + 1 ));
+        } else if (instruction.toUpperCase().equals("INC")) {
+            AC.setValue(String.valueOf(Integer.parseInt(ACProvVal) + 1));
+        } else if (instruction.toUpperCase().equals("DEC") && !value.equals("")) {
+            getReg(value).setValue(String.valueOf(Integer.parseInt(getReg(value).getValue()) - 1 ));
+        } else if (instruction.toUpperCase().equals("DEC")) {
+            AC.setValue(String.valueOf(Integer.parseInt(ACProvVal) - 1));
+        } else if (instruction.toUpperCase().equals("JMP")) {
+            int valueTemp = Integer.parseInt(value);
+            
+            if ((valueTemp + actualInstruc) < memory.getActualIndexUser()) {
+                actualInstruc = valueTemp + actualInstruc;
+            } else {
+                actualPCB.setState("Finished");
+                dispatcher.updatePCBS(actualPCB);
+                dispatcher.updateStates();
+                flagExec = false;
+            }
+        } else if (instruction.toUpperCase().equals("JNE")) {
+            int valueFlag = Integer.parseInt(getElemReg("DX"));
+            
+            if (valueFlag == 0) {
+                int valueTemp = Integer.parseInt(value);
+                
+                if ((valueTemp + actualInstruc) < memory.getActualIndexUser()) {
+                                actualInstruc = valueTemp + actualInstruc;
+                } else {
+                    actualPCB.setState("Finished");
+                    dispatcher.updatePCBS(actualPCB);
+                    dispatcher.updateStates();
+                    flagExec = false;
+                }
+            }
+        } else if (instruction.toUpperCase().equals("JE")) {
+            int valueFlag = Integer.parseInt(getElemReg("DX"));
+            
+            if (valueFlag == 1) {
+                int valueTemp = Integer.parseInt(value);
+                
+                if ((valueTemp + actualInstruc) < memory.getActualIndexUser()) {
+                                actualInstruc = valueTemp + actualInstruc;
+                } else {
+                    actualPCB.setState("Finished");
+                    dispatcher.updatePCBS(actualPCB);
+                    dispatcher.updateStates();
+                    flagExec = false;
+                }
+            }
+        } else if (instruction.toUpperCase().equals("PUSH")) {
+            String elementReg = getElemReg(value);
+            
+            if (actualPCB.getSizeStack() < 5) {
+                actualPCB.addToStack(elementReg);
+            } else {
+                actualPCB.setState("Finished");
+                dispatcher.updatePCBS(actualPCB);
+                dispatcher.updateStates();
+                flagExec = false;
+            }
+        } else if (instruction.toUpperCase().equals("POP")) {
+            if (actualPCB.getSizeStack() == 0) {
+                getReg(value).setValue("0");
+            } else {
+                getReg(value).setValue(actualPCB.getStack().get(actualPCB.getSizeStack() - 1));
+                actualPCB.getStack().remove(actualPCB.getSizeStack() - 1);
+            }
+        } else if (instruction.toUpperCase().equals("PARAM")) {
+            if (actualPCB.getSizeStack() < 5) {
+                actualPCB.addToStack(value);
+            } else {
+                actualPCB.setState("Finished");
+                dispatcher.updatePCBS(actualPCB);
+                dispatcher.updateStates();
+                flagExec = false;
+            } 
+        } else if (instruction.toUpperCase().equals("INT") && value.trim().equals("20H")) {
+                actualPCB.setState("Finished");
+                dispatcher.updatePCBS(actualPCB);
+                dispatcher.updateStates();
+                flagExec = false;
+        } else if (instruction.toUpperCase().equals("INT") && value.trim().equals("09H")) {
+                flagInt09 = true;
+                actualPCB.setState("Waiting");
+                dispatcher.updatePCBS(actualPCB);
+                dispatcher.updateStates();
+        } else if (instruction.toUpperCase().equals("INT") && value.trim().equals("10H")) {
+                flagInt10 = true;
+                actualPCB.setState("Waiting");
+                dispatcher.updatePCBS(actualPCB);
+                dispatcher.updateStates();
         }
     }
     
@@ -154,6 +256,13 @@ public class Model{
         String instruction = ins.getEachPartIns()[0].trim();
         String value = ins.getEachPartIns()[1].trim();
         String value2 = ins.getEachPartIns()[2].trim();
+        String value3 = "";
+
+        
+        if (ins.getEachPartIns().length > 3) {
+            value3 = ins.getEachPartIns()[3].trim();
+        }
+
 
         String[] registerNames = {"AX", "BX", "CX", "DX"};
         
@@ -169,13 +278,44 @@ public class Model{
             } else {
                 getReg(value).setValue(String.valueOf(Integer.parseInt(getElemReg(value)) + Integer.parseInt(value2)));
             }
-        } else {
+        } else if (instruction.toUpperCase().equals("SUB")) {
             if (searchElement(registerNames, value2.toUpperCase())) {
                 getReg(value).setValue(String.valueOf(Integer.parseInt(getElemReg(value)) - Integer.parseInt(getElemReg(value2))));
             } else {
                 getReg(value).setValue(String.valueOf(Integer.parseInt(getElemReg(value)) - Integer.parseInt(value2)));
             }
-        }
+        } else if (instruction.toUpperCase().equals("SWAP")) {
+            String elemValue1 = getElemReg(value);
+            getReg(value).setValue(getElemReg(value2));
+            getReg(value2).setValue(elemValue1);
+        } else if (instruction.toUpperCase().equals("CMP")) {
+            if (getElemReg(value).equals(getElemReg(value2))) {
+                DX.setValue("1");
+            } else {
+                DX.setValue("0");
+            }
+        } else if (instruction.toUpperCase().equals("PARAM") && !value3.equals("")) {
+            if (actualPCB.getSizeStack() + 3 < 5) {
+                actualPCB.addToStack(value);
+                actualPCB.addToStack(value2);
+                actualPCB.addToStack(value3);
+            } else {
+                actualPCB.setState("Finished");
+                dispatcher.updatePCBS(actualPCB);
+                dispatcher.updateStates();
+                flagExec = false;
+            }
+        } else if (instruction.toUpperCase().equals("PARAM") && value.equals("")) {
+            if (actualPCB.getSizeStack() + 2 < 5) {
+                actualPCB.addToStack(value);
+                actualPCB.addToStack(value2);
+            } else {
+                actualPCB.setState("Finished");
+                dispatcher.updatePCBS(actualPCB);
+                dispatcher.updateStates();
+                flagExec = false;
+            }
+        } 
     }
     
     public String getElemReg(String nameR) {
@@ -225,6 +365,9 @@ public class Model{
         memory = new Memory(memorySize, 0, userMemStart);
     }
 
+    public void restartStorage() {
+        actualStorage = new Storage(512, 64);
+    }
     
     //Getters and setters
     public Register getAX() {
@@ -281,6 +424,14 @@ public class Model{
 
     public Dispatcher getDispatcher() {
         return dispatcher;
+    }
+
+    public Storage getActualStorage() {
+        return actualStorage;
+    }
+
+    public void setActualStorage(Storage actualStorage) {
+        this.actualStorage = actualStorage;
     }
     
 }

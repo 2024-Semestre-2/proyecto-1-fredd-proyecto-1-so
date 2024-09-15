@@ -15,6 +15,8 @@ public class Instruction {
     }
     
     public void divideIns(String[] parts) {
+        
+        
         if (parts.length > 1) {
             
             this.eachPartIns = new String[3];
@@ -22,9 +24,14 @@ public class Instruction {
             this.eachPartIns[1] = parts[0].split(" ")[1].trim();
             this.eachPartIns[2] = parts[1].trim();
         } else {
-            this.eachPartIns = new String[2];
-            this.eachPartIns[0] = parts[0].split(" ")[0].trim();
-            this.eachPartIns[1] = parts[0].split(" ")[1].trim();
+            if (parts[0].trim().split(" ").length == 2) {
+                this.eachPartIns = new String[2];
+                this.eachPartIns[0] = parts[0].split(" ")[0].trim();
+                this.eachPartIns[1] = parts[0].split(" ")[1].trim(); 
+            } else {
+                this.eachPartIns = new String[1];
+                this.eachPartIns[0] = parts[0].trim();
+            }
         }
     }
 

@@ -66,9 +66,13 @@ public class ControllerLoadFile implements ActionListener {
         } else {
             System.out.println("No file found.");
         }
+        
+        
         model.getDispatcher().updateStates();
+        model.getActualStorage().fillStorage(model.getDispatcher());
         view.automaticExec.setEnabled(true);
         view.stepsExec.setEnabled(true);
+        view.storageBlock.setText(model.getActualStorage().storageToString());
     }
    
     
