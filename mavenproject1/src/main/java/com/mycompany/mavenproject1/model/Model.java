@@ -13,7 +13,8 @@ import java.util.ArrayList;
  *
  * @author fredd
  */
-public class Model{
+public class Model {
+    
     int memorySize = 256;
     int userMemStart = 40;
     String actualInstrucString = "";
@@ -35,8 +36,12 @@ public class Model{
     PCB actualPCB;
     
     //Storage section
+    int storageSize = 512;
+    int storageStart = 64;
     private Storage actualStorage = new Storage(512, 64);
-
+    
+    private String msgError = "\n>> Process finished successfully. " + "\n";
+    
     
     public Model() {
         
@@ -55,7 +60,7 @@ public class Model{
     
     public void setUserInsToMemo() {
         Instruction[] insProv = convertLinesToIns();
-        memory = new Memory(memorySize, 0, userMemStart);
+        memory.resetMemory();
         AX.setValue("0"); 
         BX.setValue("0"); 
         CX.setValue("0"); 
@@ -74,8 +79,7 @@ public class Model{
         }
         
         System.out.println(actualInd);
-        memory.setIndexUser(actualInd);
-        actualInstruc = memory.getIndexUser();
+        actualInstruc = actualInd;
         
         for (Instruction element: insProv) {
             actualIns[actualInd] = element;
@@ -85,6 +89,36 @@ public class Model{
         memory.setMemoryInstrucs(actualIns);
      
         //memory.printMemory();
+    }
+    
+    
+    public void executionProgramAuto() throws InterruptedException {
+        
+        while (actualInstruc < memory.getActualIndexUser()) {
+            Instruction tempIns = memory.getMemoryInstrucs()[actualInstruc];
+            tempIns.printInst();
+            actualInstrucString = tempIns.getCompIns();
+
+            if (tempIns.getEachPartIns().length < 3) {
+                setToMemorySimp(tempIns);
+            } else {
+                setToMemoryComp(tempIns);
+            }
+            actualInstruc++;
+            
+            actualPCB.setAC(AC);
+            actualPCB.setAX(AX);
+            actualPCB.setBX(BX);
+            actualPCB.setCX(CX);
+            actualPCB.setDX(DX);
+        } 
+        
+        setActualPCB(actualPCB.clonePCB());
+        actualPCB.setState("Finished");
+        dispatcher.updatePCBS(actualPCB);
+        dispatcher.updateStates();
+        flagExec = false;
+        
     }
     
     
@@ -108,6 +142,7 @@ public class Model{
             actualPCB.setCX(CX);
             actualPCB.setDX(DX);
         } else {
+            setActualPCB(actualPCB.clonePCB());
             actualPCB.setState("Finished");
             dispatcher.updatePCBS(actualPCB);
             dispatcher.updateStates();
@@ -131,51 +166,100 @@ public class Model{
         if (instruction.toUpperCase().equals("MOV")) {
             if (searchElement(registerNames, value.toUpperCase())) {
                 AC.setValue(getElemReg(value));
+                Thread.sleep(1000);
             } else {
                 AC.setValue(value);
+                Thread.sleep(1000);
             }
         } else if (instruction.toUpperCase().equals("LOAD")) {
             if (searchElement(registerNames, value.toUpperCase())) {
                 AC.setValue(getElemReg(value));
+                Thread.sleep(2000);
             } else {
                 AC.setValue(value);
+                Thread.sleep(2000);
             }
         } else if (instruction.toUpperCase().equals("STORE")) {
             if (searchElement(registerNames, value.toUpperCase())) {
                 getReg(value).setValue(AC.getValue());
+                Thread.sleep(2000);
             } else {
                 AC.setValue(value);
+                Thread.sleep(2000);
             }
         } else if (instruction.toUpperCase().equals("ADD")) {
             if (searchElement(registerNames, value.toUpperCase())) {
                 AC.setValue(String.valueOf(Integer.parseInt(getElemReg(value).trim()) + Integer.parseInt(ACProvVal)));
+                Thread.sleep(3000);
             } else {
                 AC.setValue(String.valueOf(Integer.parseInt(value) + Integer.parseInt(ACProvVal)));
+                Thread.sleep(3000);
             }
         } else if (instruction.toUpperCase().equals("SUB")){
             if (searchElement(registerNames, value.toUpperCase())) {
                 AC.setValue(String.valueOf(Integer.parseInt(ACProvVal) - Integer.parseInt(getElemReg(value))));
+                Thread.sleep(3000);
             } else {
                 AC.setValue(String.valueOf(Integer.parseInt(ACProvVal) - Integer.parseInt(value)));
+                Thread.sleep(3000);
             } 
         } else if (instruction.toUpperCase().equals("INC") && !value.equals("")) {
             getReg(value).setValue(String.valueOf(Integer.parseInt(getReg(value).getValue()) + 1 ));
+            Thread.sleep(1000);
         } else if (instruction.toUpperCase().equals("INC")) {
             AC.setValue(String.valueOf(Integer.parseInt(ACProvVal) + 1));
+            Thread.sleep(1000);
         } else if (instruction.toUpperCase().equals("DEC") && !value.equals("")) {
             getReg(value).setValue(String.valueOf(Integer.parseInt(getReg(value).getValue()) - 1 ));
+            Thread.sleep(1000);
         } else if (instruction.toUpperCase().equals("DEC")) {
             AC.setValue(String.valueOf(Integer.parseInt(ACProvVal) - 1));
+            Thread.sleep(1000);
+        } else if (instruction.toUpperCase().equals("JMP") && Integer.parseInt(value) < 0) {
+            int valueTemp = Integer.parseInt(value);
+            
+            if (memory.getMemoryInstrucs()[actualInstruc - valueTemp] != null) {
+                actualInstruc = actualInstruc - valueTemp;
+                Thread.sleep(2000);
+            } else {
+                setActualPCB(actualPCB.clonePCB());
+                setMsgError("\nExecution error, a jump back positions outside the code range\n");
+                actualPCB.setState("Finished");
+                dispatcher.updatePCBS(actualPCB);
+                dispatcher.updateStates();
+                flagExec = false;
+            }
         } else if (instruction.toUpperCase().equals("JMP")) {
             int valueTemp = Integer.parseInt(value);
             
             if ((valueTemp + actualInstruc) < memory.getActualIndexUser()) {
                 actualInstruc = valueTemp + actualInstruc;
+                Thread.sleep(2000);
             } else {
+                setActualPCB(actualPCB.clonePCB());
+                setMsgError("\nExecution error, a jump forward positions outside the code range\n");
                 actualPCB.setState("Finished");
                 dispatcher.updatePCBS(actualPCB);
                 dispatcher.updateStates();
                 flagExec = false;
+            }
+        } else if (instruction.toUpperCase().equals("JNE") && Integer.parseInt(value) < 0) {
+            int valueFlag = Integer.parseInt(getElemReg("DX"));
+            
+            if (valueFlag == 0) {
+                int valueTemp = Integer.parseInt(value);
+                
+                if (memory.getMemoryInstrucs()[actualInstruc - valueTemp] != null) {
+                    actualInstruc = actualInstruc - valueTemp;
+                    Thread.sleep(2000);
+                } else {
+                    setActualPCB(actualPCB.clonePCB());
+                    setMsgError("\nExecution error, a jump back positions outside the code range\n");
+                    actualPCB.setState("Finished");
+                    dispatcher.updatePCBS(actualPCB);
+                    dispatcher.updateStates();
+                    flagExec = false;
+                }
             }
         } else if (instruction.toUpperCase().equals("JNE")) {
             int valueFlag = Integer.parseInt(getElemReg("DX"));
@@ -184,8 +268,29 @@ public class Model{
                 int valueTemp = Integer.parseInt(value);
                 
                 if ((valueTemp + actualInstruc) < memory.getActualIndexUser()) {
-                                actualInstruc = valueTemp + actualInstruc;
+                    actualInstruc = valueTemp + actualInstruc;
+                    Thread.sleep(2000);
                 } else {
+                    setActualPCB(actualPCB.clonePCB());
+                    setMsgError("\nExecution error, a jump forward positions outside the code range\n");
+                    actualPCB.setState("Finished");
+                    dispatcher.updatePCBS(actualPCB);
+                    dispatcher.updateStates();
+                    flagExec = false;
+                }
+            }
+        } else if (instruction.toUpperCase().equals("JE") && Integer.parseInt(value) < 0) {
+            int valueFlag = Integer.parseInt(getElemReg("DX"));
+            
+            if (valueFlag == 1) {
+                int valueTemp = Integer.parseInt(value);
+                
+                if (memory.getMemoryInstrucs()[actualInstruc - valueTemp] != null) {
+                    actualInstruc = actualInstruc - valueTemp;
+                    Thread.sleep(1000);
+                } else {
+                    setActualPCB(actualPCB.clonePCB());
+                    setMsgError("\nExecution error, a jump back positions outside the code range\n");
                     actualPCB.setState("Finished");
                     dispatcher.updatePCBS(actualPCB);
                     dispatcher.updateStates();
@@ -199,8 +304,11 @@ public class Model{
                 int valueTemp = Integer.parseInt(value);
                 
                 if ((valueTemp + actualInstruc) < memory.getActualIndexUser()) {
-                                actualInstruc = valueTemp + actualInstruc;
+                    actualInstruc = valueTemp + actualInstruc;
+                    Thread.sleep(2000);
                 } else {
+                    setActualPCB(actualPCB.clonePCB());
+                    setMsgError("\nExecution error, a jump forward positions outside the code range\n");
                     actualPCB.setState("Finished");
                     dispatcher.updatePCBS(actualPCB);
                     dispatcher.updateStates();
@@ -210,9 +318,15 @@ public class Model{
         } else if (instruction.toUpperCase().equals("PUSH")) {
             String elementReg = getElemReg(value);
             
-            if (actualPCB.getSizeStack() < 5) {
+            if (actualPCB.getSizeStack() < 6) {
+                System.out.println(actualPCB.getSizeStack());
+                System.out.println("ddd");
+
                 actualPCB.addToStack(elementReg);
+                Thread.sleep(1000);
             } else {
+                setActualPCB(actualPCB.clonePCB());
+                setMsgError("\nExecution error, stack overflow\n");
                 actualPCB.setState("Finished");
                 dispatcher.updatePCBS(actualPCB);
                 dispatcher.updateStates();
@@ -221,20 +335,26 @@ public class Model{
         } else if (instruction.toUpperCase().equals("POP")) {
             if (actualPCB.getSizeStack() == 0) {
                 getReg(value).setValue("0");
+                Thread.sleep(1000);
             } else {
                 getReg(value).setValue(actualPCB.getStack().get(actualPCB.getSizeStack() - 1));
                 actualPCB.getStack().remove(actualPCB.getSizeStack() - 1);
             }
         } else if (instruction.toUpperCase().equals("PARAM")) {
-            if (actualPCB.getSizeStack() < 5) {
+            if (actualPCB.getSizeStack() < 6) {
                 actualPCB.addToStack(value);
+                Thread.sleep(3000);
             } else {
+                setActualPCB(actualPCB.clonePCB());
+                setMsgError("\nExecution error, param stack overflow\n");
                 actualPCB.setState("Finished");
                 dispatcher.updatePCBS(actualPCB);
                 dispatcher.updateStates();
                 flagExec = false;
             } 
         } else if (instruction.toUpperCase().equals("INT") && value.trim().equals("20H")) {
+                setActualPCB(actualPCB.clonePCB());
+                Thread.sleep(2000);
                 actualPCB.setState("Finished");
                 dispatcher.updatePCBS(actualPCB);
                 dispatcher.updateStates();
@@ -244,15 +364,17 @@ public class Model{
                 actualPCB.setState("Waiting");
                 dispatcher.updatePCBS(actualPCB);
                 dispatcher.updateStates();
+                Thread.sleep(2000);
         } else if (instruction.toUpperCase().equals("INT") && value.trim().equals("10H")) {
                 flagInt10 = true;
                 actualPCB.setState("Waiting");
                 dispatcher.updatePCBS(actualPCB);
                 dispatcher.updateStates();
+                Thread.sleep(2000);
         }
     }
     
-    public void setToMemoryComp(Instruction ins) {
+    public void setToMemoryComp(Instruction ins) throws InterruptedException {
         String instruction = ins.getEachPartIns()[0].trim();
         String value = ins.getEachPartIns()[1].trim();
         String value2 = ins.getEachPartIns()[2].trim();
@@ -269,47 +391,62 @@ public class Model{
         if (instruction.toUpperCase().equals("MOV")) {
             if (searchElement(registerNames, value2.toUpperCase())) {
                 getReg(value).setValue(getReg(value2).getValue());
+                Thread.sleep(1000);
             } else {
                 getReg(value).setValue(value2);
+                Thread.sleep(1000);
             }
         } else if (instruction.toUpperCase().equals("ADD")) {
             if (searchElement(registerNames, value2.toUpperCase())) {
                 getReg(value).setValue(String.valueOf(Integer.parseInt(getElemReg(value)) + Integer.parseInt(getElemReg(value2))));
+                Thread.sleep(3000);
             } else {
                 getReg(value).setValue(String.valueOf(Integer.parseInt(getElemReg(value)) + Integer.parseInt(value2)));
+                Thread.sleep(3000);
             }
         } else if (instruction.toUpperCase().equals("SUB")) {
             if (searchElement(registerNames, value2.toUpperCase())) {
                 getReg(value).setValue(String.valueOf(Integer.parseInt(getElemReg(value)) - Integer.parseInt(getElemReg(value2))));
+                Thread.sleep(3000);
             } else {
                 getReg(value).setValue(String.valueOf(Integer.parseInt(getElemReg(value)) - Integer.parseInt(value2)));
+                Thread.sleep(3000);
             }
         } else if (instruction.toUpperCase().equals("SWAP")) {
             String elemValue1 = getElemReg(value);
             getReg(value).setValue(getElemReg(value2));
             getReg(value2).setValue(elemValue1);
+            Thread.sleep(1000);
         } else if (instruction.toUpperCase().equals("CMP")) {
             if (getElemReg(value).equals(getElemReg(value2))) {
                 DX.setValue("1");
+                Thread.sleep(2000);
             } else {
                 DX.setValue("0");
+                Thread.sleep(2000);
             }
         } else if (instruction.toUpperCase().equals("PARAM") && !value3.equals("")) {
-            if (actualPCB.getSizeStack() + 3 < 5) {
+            if (actualPCB.getSizeStack() + 3 <= 5) {
                 actualPCB.addToStack(value);
                 actualPCB.addToStack(value2);
                 actualPCB.addToStack(value3);
+                Thread.sleep(3000);
             } else {
+                setActualPCB(actualPCB.clonePCB());
+                setMsgError("\nExecution error, param stack overflow\n");
                 actualPCB.setState("Finished");
                 dispatcher.updatePCBS(actualPCB);
                 dispatcher.updateStates();
                 flagExec = false;
             }
-        } else if (instruction.toUpperCase().equals("PARAM") && value.equals("")) {
-            if (actualPCB.getSizeStack() + 2 < 5) {
+        } else if (instruction.toUpperCase().equals("PARAM")) {
+            if (actualPCB.getSizeStack() + 2 <= 5) {
                 actualPCB.addToStack(value);
                 actualPCB.addToStack(value2);
+                Thread.sleep(3000);
             } else {
+                setActualPCB(actualPCB.clonePCB());
+                setMsgError("\nExecution error, param stack overflow\n");
                 actualPCB.setState("Finished");
                 dispatcher.updatePCBS(actualPCB);
                 dispatcher.updateStates();
@@ -432,6 +569,39 @@ public class Model{
 
     public void setActualStorage(Storage actualStorage) {
         this.actualStorage = actualStorage;
+    }
+
+    public int getStorageSize() {
+        return storageSize;
+    }
+
+    public void setStorageSize(int storageSize) {
+        this.storageSize = storageSize;
+    }
+
+    public int getStorageStart() {
+        return storageStart;
+    }
+
+    public void setStorageStart(int storageStart) {
+        this.storageStart = storageStart;
+        actualStorage = new Storage(storageSize, storageStart);
+    }
+
+    public void setMemory(Memory memory) {
+        this.memory = memory;
+    }
+
+    public String getMsgError() {
+        return msgError;
+    }
+
+    public void setMsgError(String msgError) {
+        this.msgError = msgError;
+    }
+ 
+    public void setDispatcher(Dispatcher temp) {
+        this.dispatcher = temp;
     }
     
 }

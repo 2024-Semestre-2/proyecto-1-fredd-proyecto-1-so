@@ -8,10 +8,15 @@ package com.mycompany.Bslogic;
 public class Instruction {
     private String compIns;
     private String[] eachPartIns;
+    private int actualPCBID;
     
     public Instruction (String compIns) {
         this.compIns = compIns;
         divideIns(compIns.split(","));
+    }
+    
+    public Instruction (int actualPCBID) {
+        this.actualPCBID = actualPCBID;
     }
     
     public void divideIns(String[] parts) {
@@ -19,10 +24,18 @@ public class Instruction {
         
         if (parts.length > 1) {
             
-            this.eachPartIns = new String[3];
-            this.eachPartIns[0] = parts[0].split(" ")[0].trim();
-            this.eachPartIns[1] = parts[0].split(" ")[1].trim();
-            this.eachPartIns[2] = parts[1].trim();
+            if (parts.length > 2) {
+                this.eachPartIns = new String[4];
+                this.eachPartIns[0] = parts[0].split(" ")[0].trim();
+                this.eachPartIns[1] = parts[0].split(" ")[1].trim();
+                this.eachPartIns[2] = parts[1].trim(); 
+                this.eachPartIns[3] = parts[2].trim(); 
+            } else {
+                this.eachPartIns = new String[3];
+                this.eachPartIns[0] = parts[0].split(" ")[0].trim();
+                this.eachPartIns[1] = parts[0].split(" ")[1].trim();
+                this.eachPartIns[2] = parts[1].trim(); 
+            }
         } else {
             if (parts[0].trim().split(" ").length == 2) {
                 this.eachPartIns = new String[2];
@@ -56,6 +69,16 @@ public class Instruction {
     public void setEachPartIns(String[] eachPartIns) {
         this.eachPartIns = eachPartIns;
     }
+
+    public int getActualPCBID() {
+        return actualPCBID;
+    }
+
+    public void setActualPCBID(int actualPCBID) {
+        this.actualPCBID = actualPCBID;
+    }
+    
+    
 }
 
 

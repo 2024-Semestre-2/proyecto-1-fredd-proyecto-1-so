@@ -11,12 +11,14 @@ public class Memory {
     private int indexUser;
     private int actualIndexOS;
     private int actualIndexUser;
+    private int memorySpace;
     
     public Memory(int memorySpace, int indexOS, int indexUser) {
         this.indexOS = indexOS;
         this.indexUser = indexUser;
         this.actualIndexOS = indexOS;
         this.actualIndexUser = indexUser;
+        this.memorySpace = memorySpace;
         memoryInstrucs = new Instruction[memorySpace];
     }
     
@@ -28,6 +30,15 @@ public class Memory {
             }
             System.out.println("Empty space");
         }
+    }
+    
+    public void resetMemory() {
+        for (int i = indexUser; i < memorySpace; i++) {
+            memoryInstrucs[i] = null;
+        }
+        
+        this.actualIndexOS = indexOS;
+        this.actualIndexUser = indexUser;
     }
     
     public int getActualIndexOS() {

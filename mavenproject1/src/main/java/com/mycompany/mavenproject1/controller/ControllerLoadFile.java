@@ -1,6 +1,7 @@
 
 package com.mycompany.mavenproject1.controller;
 
+import com.mycompany.Bslogic.Dispatcher;
 import com.mycompany.Bslogic.Instruction;
 import com.mycompany.mavenproject1.model.Model;
 import com.mycompany.mavenproject1.view.App;
@@ -11,6 +12,10 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.swing.JFileChooser;
 
 /**
@@ -28,6 +33,10 @@ public class ControllerLoadFile implements ActionListener {
         view.loadFile.addActionListener(this);
         view.automaticExec.setEnabled(false);
         view.stepsExec.setEnabled(false);
+        
+        
+        model.getActualStorage().fillStorage();
+        view.storageBlock.setText(model.getActualStorage().storageToString());
     }
 
     public void start() {
@@ -49,6 +58,8 @@ public class ControllerLoadFile implements ActionListener {
     public void handleLoadFile() {
         JFileChooser fileChooser = new JFileChooser();
         //view.stepsExec.setEnabled(false);
+        
+        model.setDispatcher(new Dispatcher());
 
         // Habilitar selección múltiple de archivos
         fileChooser.setMultiSelectionEnabled(true);
@@ -60,8 +71,14 @@ public class ControllerLoadFile implements ActionListener {
             File[] selectedFiles = fileChooser.getSelectedFiles();
             
             for (File selectedFile : selectedFiles) {
-                //This is meanwhile validations are created
-                model.getDispatcher().createPCB(getELementsOfFile(selectedFile), selectedFile.getAbsolutePath());
+                
+                
+                if (validateFile(getELementsOfFile(selectedFile))) {
+                    model.getDispatcher().createPCB(getELementsOfFile(selectedFile), selectedFile.getAbsolutePath());
+                } else {
+                    view.consoleBlock.append(selectedFile.getAbsolutePath() + "\n\n");
+                }
+               
             }
         } else {
             System.out.println("No file found.");
@@ -69,10 +86,16 @@ public class ControllerLoadFile implements ActionListener {
         
         
         model.getDispatcher().updateStates();
-        model.getActualStorage().fillStorage(model.getDispatcher());
+        //model.getActualStorage().fillStorage(model.getDispatcher());
         view.automaticExec.setEnabled(true);
         view.stepsExec.setEnabled(true);
-        view.storageBlock.setText(model.getActualStorage().storageToString());
+        //view.storageBlock.setText(model.getActualStorage().storageToString());
+        model.getMemory().resetMemory();
+        model.getDispatcher().initializeMemo(model.getMemory(), model.getActualStorage());
+        
+        
+        view.setStorage.setEnabled(false);
+        view.setMemory.setEnabled(false);
     }
    
     
@@ -92,6 +115,47 @@ public class ControllerLoadFile implements ActionListener {
         }
         
         return lines;
+    }
+    
+    
+    public boolean validateFile(ArrayList<String> lines) {
+        String registros = "(AX|BX|CX|DX)";
+        
+        String regexLoad = "^LOAD\\s+" + registros + "$"; 
+        String regexStore = "^STORE\\s+" + registros + "$"; 
+        String regexMovRegToReg = "^MOV\\s+" + registros + ",\\s*" + registros + "$"; 
+        String regexMovRegToVal = "^MOV\\s+" + registros + ",\\s*-?\\d+$";
+        String regexAdd = "^ADD\\s+" + registros + "$"; 
+        String regexSub = "^SUB\\s+" + registros + "$"; 
+        String regexInc = "^INC(\\s+" + registros + ")?$"; 
+        String regexDec = "^DEC(\\s+" + registros + ")?$"; 
+        String regexSwap = "^SWAP\\s+" + registros + ",\\s*" + registros + "$"; 
+        String regexCmp = "^CMP\\s+" + registros + ",\\s*" + registros + "$"; 
+        String regexPush = "^PUSH\\s+" + registros + "$";
+        String regexPop = "^POP\\s+" + registros + "$"; 
+        String regexInt = "^INT\\s+\\d{2}H$";
+        String regexJmp = "^JMP\\s+-\\d+$"; 
+        String regexJeJne = "^(JE|JNE)\\s+-\\d+$"; 
+        String regexParam = "^PARAM\\s+(\\d+,\\s*)*\\d+$"; 
+
+        
+        Pattern pattern = Pattern.compile(
+                regexLoad + "|" + regexStore + "|" + regexMovRegToReg + "|" + regexMovRegToVal + "|" +
+                regexAdd + "|" + regexSub + "|" + regexInc + "|" + regexDec + "|" + regexSwap + "|" +
+                regexInt + "|" + regexJmp + "|" + regexCmp + "|" + regexJeJne + "|" + regexParam + "|" +
+                regexPush + "|" + regexPop
+        );
+
+        
+        for (String line: lines) {
+            Matcher matcher = pattern.matcher(line.trim());
+            if (!matcher.matches()) {
+                view.consoleBlock.append("\n>> Error in " + line + " located in ");
+                return false;
+            }
+        }
+        
+        return true;
     }
     
 }

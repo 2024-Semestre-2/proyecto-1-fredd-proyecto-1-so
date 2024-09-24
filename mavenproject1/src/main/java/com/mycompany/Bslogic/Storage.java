@@ -15,36 +15,42 @@ public class Storage {
     
     public Storage(int size, int virtualMemInd) {
         this.size = size;
-        this.virtualMenInd = virtualMemInd ;
+        this.virtualMenInd = virtualMemInd;
     }
     
     public void addElement(String element) {
         this.storageElements.add(element);
     }
     
-    public void fillStorage(Dispatcher disp) {
-        ArrayList<PCB> tempPCB = disp.getAllProcesses();
-        
+    
+    public void fillStorage() {
         for (int i = 0; i < size; i++) {
             if (i < virtualMenInd) {
                 storageElements.add(String.valueOf(i) + " Virtual memory empty space");
             }
         }
         
-        int index = 0;
         int tempInd = virtualMenInd;
         while (tempInd < size) {
-            
-            if (index < tempPCB.size()) {
-                storageElements.add("Storage position: " + String.valueOf(tempInd) + " || PCB with id: " + String.valueOf(tempPCB.get(index).getPCBID()) + " || State: " + tempPCB.get(index).getState() + " || located in: " + tempPCB.get(index).getPath()); 
-                index++;
-            } else {
-                storageElements.add(String.valueOf(tempInd) + " Storage empty space"); 
-            }
+            storageElements.add(String.valueOf(tempInd) + " Storage empty space"); 
             
             tempInd++;
         }
     }
+    
+    public void addToStorage(PCB tempPCB) {
+
+        int tempInd = virtualMenInd;
+        while (tempInd < size) {
+            if (storageElements.get(tempInd).contains("Storage empty space")) {
+                storageElements.set(tempInd, "Storage position: " + String.valueOf(tempInd) + " || PCB with id: " + String.valueOf(tempPCB.getPCBID()) + " || State: " + tempPCB.getState() + " || located in: " + tempPCB.getPath()); 
+                break;
+            }
+            tempInd++;
+        }
+    }
+    
+
     
     public String storageToString () {
         String text = "";

@@ -35,6 +35,8 @@ public class Dispatcher {
         }
     }
     
+    
+    
     public int countR() {
         int count = 0;
         for (PCB temp : allProcesses) {
@@ -42,7 +44,6 @@ public class Dispatcher {
             if (temp.getState().equals("Ready")) {
                 count++;
             }
-            
         }
         
         return count;
@@ -78,4 +79,65 @@ public class Dispatcher {
         return true;
     }
     
+    public PCB searchPCB(int id) {
+        for (PCB temp : allProcesses) {
+            if (temp.getPCBID() == id) {
+                return temp;
+            }
+        }
+        
+        return null;
+    }
+    
+    
+    public void initializeMemo(Memory tempMemo, Storage tempStorage) {
+        for (int i = 0; i < tempMemo.getIndexUser(); i ++) {
+            if (i < allProcesses.size()) {
+                tempMemo.getMemoryInstrucs()[i] = new Instruction(allProcesses.get(i).getPCBID());
+            } else {
+                break;
+            }  
+        }
+        
+        if (tempMemo.getIndexUser() < allProcesses.size()) {
+            for (int i = tempMemo.getIndexUser(); i < allProcesses.size(); i ++) {
+                tempStorage.addToStorage(allProcesses.get(i));
+            }
+        }
+    }
+    
+    public Memory manageMemo(Memory tempMemo) {
+        int indexMemo = 0;
+
+        for (int i = 0; i < tempMemo.getMemoryInstrucs().length; i++) {
+           tempMemo.getMemoryInstrucs()[i] = null;
+        }
+        
+        for (int j = 0; j < allProcesses.size(); j++) {
+            
+            if (indexMemo < tempMemo.getIndexUser() && !allProcesses.get(j).getState().equals("Finished")) {
+                tempMemo.getMemoryInstrucs()[indexMemo] = new Instruction(allProcesses.get(j).getPCBID());
+                indexMemo++;
+                System.out.println("Instrucción añadida en la posición: " + indexMemo);
+            }
+        }
+
+        return tempMemo;
+    }
+    
+    public Storage manageStorage(Storage tempSto) {
+        ArrayList<String> tempContent = tempSto.getStorageElements();
+        int tempInd = tempSto.getVirtualMenInd();
+        
+        while(tempInd < tempSto.getSize()) {
+            if (!tempContent.get(tempInd).contains("|| State: Finished")) {
+                tempContent.set(tempInd, String.valueOf(tempInd) + " Storage empty space");
+            }
+            
+            tempInd++;
+        }
+        
+        tempSto.setStorageElements(tempContent);
+        return tempSto;
+    }
 }

@@ -8,11 +8,18 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
 import javax.swing.Timer;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -22,6 +29,13 @@ public class ControllerRegisters implements ActionListener {
     private App view;
     private Model model;
     private String consoleInp = "";
+    private boolean isAuto = false;
+    
+    private ScheduledExecutorService executorService;
+
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
+    
 
     public ControllerRegisters(App view, Model model) {
         this.view = view;
@@ -31,15 +45,30 @@ public class ControllerRegisters implements ActionListener {
         setupKeyListener();
     }
     
+    
+
+    
+
+
+    private void clearKeyListeners() {
+        KeyListener[] listeners = view.consoleBlock.getKeyListeners();
+        for (KeyListener listener : listeners) {
+            view.consoleBlock.removeKeyListener(listener);
+        }
+    }
+    
     private void setupKeyListener() {
+        clearKeyListeners();
         view.consoleBlock.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
                 if (model.flagInt09 && e.getKeyCode() == KeyEvent.VK_ENTER) {
                     e.consume(); 
-                    
+
                     String[] lines = view.consoleBlock.getText().split("\n");
                     consoleInp = lines[lines.length - 1];
+                    
+                    
                     processConsoleInput();
                 }
             }
@@ -51,21 +80,28 @@ public class ControllerRegisters implements ActionListener {
         if (!consoleInp.trim().isEmpty()) {
             view.consoleBlock.setEditable(false);
             model.flagInt09 = false;
-            model.restartStorage();
-            model.getActualStorage().fillStorage(model.getDispatcher());
-            view.storageBlock.setText(model.getActualStorage().storageToString());
-            view.storageBlock.setCaretPosition(view.storageBlock.getDocument().getLength()); 
+            //model.restartStorage();
+            //model.getActualStorage().fillStorage(model.getDispatcher());
+            writeBlockMemory();
+            view.memoryBlock.setCaretPosition(0); 
 
             model.getDX().setValue(consoleInp);
             checkRegisters();
 
-           
-            new Timer(3000, e -> {
+            if (isAuto) {
+                new Timer(3000, e -> {
+                startAutomaticExecution();
+                }).start();
+            } else {
+                new Timer(3000, e -> {
                 view.stepsExec.setEnabled(true);
-            }).start();
+                }).start();
+            }
         }
     }
-
+    
+    
+    
     public void actionPerformed(ActionEvent e) {
         Object source = e.getSource();
 
@@ -83,6 +119,81 @@ public class ControllerRegisters implements ActionListener {
         }
     }
     
+    
+    public void startAutomaticExecution() {
+        if (executorService != null && !executorService.isShutdown()) {
+            stopAutomaticExecution();
+        }
+        executorService = Executors.newSingleThreadScheduledExecutor();
+        executorService.scheduleAtFixedRate(() -> {
+            try {
+                handleMoveExecAuto();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, 0, 300, TimeUnit.MILLISECONDS); // Ejecuta cada 100 ms
+    }
+
+    public void stopAutomaticExecution() {
+        if (executorService != null && !executorService.isShutdown()) {
+            executorService.shutdownNow(); // Fuerza la detención
+        }
+    }
+    
+
+    
+    
+    public void handleMoveExecAuto() throws InterruptedException {
+        
+        if (!isAuto) {
+            return;
+        }
+        
+        if (!model.flagExec) {
+            prepareExec();
+            
+        } else {
+
+            checkRegisters();
+            model.executionProgramSteps();
+            view.pcRegister.setText(String.valueOf(model.getActualInstruc()));
+            view.irRegister.setText(String.valueOf(model.getActualInstrucString()));
+            view.automaticExec.setEnabled(false);
+            
+            
+            if (model.flagInt10) {
+                view.consoleBlock.append(">> Element in DX: " + model.getDX().getValue() + "\n\n");
+                model.flagInt10 = false;
+                //model.restartStorage();
+                //model.getActualStorage().fillStorage(model.getDispatcher());
+                writeBlockMemory();
+                view.memoryBlock.setCaretPosition(0);
+                
+                Thread.sleep(3000);
+            } else if (model.flagInt09) {
+                view.consoleBlock.append(">> Write a number between 0-255: \n");
+                view.consoleBlock.setEditable(true);
+                view.stepsExec.setEnabled(false);
+
+                stopAutomaticExecution();
+                // Espera hasta que el usuario presione Enter
+                setupKeyListener();
+                view.consoleBlock.append("\n\n");
+
+            } else {
+                model.getActualPCB().setState("Executing");
+                model.getDispatcher().updatePCBS(model.getActualPCB());
+                model.getDispatcher().updateStates();
+
+                //model.restartStorage();
+                //model.getActualStorage().fillStorage(model.getDispatcher());
+                view.storageBlock.setText(model.getActualStorage().storageToString());
+                writeBlockMemory();
+            }
+        }
+    }
+
+    
     public void handleMoveExec() throws InterruptedException {
         
         if (!model.flagExec) {
@@ -99,10 +210,10 @@ public class ControllerRegisters implements ActionListener {
             if (model.flagInt10) {
                 view.consoleBlock.append(">> Element in DX: " + model.getDX().getValue() + "\n\n");
                 model.flagInt10 = false;
-                model.restartStorage();
-                model.getActualStorage().fillStorage(model.getDispatcher());
-                view.storageBlock.setText(model.getActualStorage().storageToString());
-                view.storageBlock.setCaretPosition(70);
+                //model.restartStorage();
+                //model.getActualStorage().fillStorage(model.getDispatcher());
+                writeBlockMemory();
+                view.memoryBlock.setCaretPosition(0);
                 
                 Thread.sleep(3000);
             } else if (model.flagInt09) {
@@ -119,18 +230,18 @@ public class ControllerRegisters implements ActionListener {
                 model.getDispatcher().updatePCBS(model.getActualPCB());
                 model.getDispatcher().updateStates();
 
-                model.restartStorage();
-                model.getActualStorage().fillStorage(model.getDispatcher());
+                //model.restartStorage();
+                //model.getActualStorage().fillStorage(model.getDispatcher());
                 view.storageBlock.setText(model.getActualStorage().storageToString());
+                writeBlockMemory();
             }
-            
-
         }
     }
     
     
     public void handleAutoExec() {
-        
+        isAuto = true;
+        startAutomaticExecution();
     }
     
     public void checkRegisters() {
@@ -143,14 +254,36 @@ public class ControllerRegisters implements ActionListener {
     
     
     public void prepareExec() {
+        
         PCB nextPcb = model.getDispatcher().getNextPCB();
+        
         if (nextPcb != null && !model.getDispatcher().checkIfAllFinished()) {
             if (model.getActualPCB() != null) {
+                
                 view.automaticExec.setEnabled(true);
-                JOptionPane.showMessageDialog(null, "Process finished successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
-                model.getActualStorage().fillStorage(model.getDispatcher());
-                view.storageBlock.setText(model.getActualStorage().storageToString());
+                view.consoleBlock.append(model.getMsgError());
+                model.setMsgError("\n>> Process finished successfully. " + "\n");
+                
+                endTime = LocalDateTime.now();
+                Duration duration = Duration.between(startTime, endTime);
+                view.consoleBlock.append(String.format(">> Execution time: %02d:%02d seconds\n\n",
+                duration.toMinutesPart(), duration.toSecondsPart()));
+
+                model.getActualPCB().setStartTime(startTime);
+                model.getActualPCB().setEndTime(endTime);
+                
+                model.getActualPCB().setState("Finished");
+                model.getDispatcher().updatePCBS(model.getActualPCB());
+                model.getDispatcher().updateStates();
+                //model.getActualStorage().fillStorage(model.getDispatcher());
+                
+                model.setMemory(model.getDispatcher().manageMemo(model.getMemory()));
+                model.getActualStorage().addToStorage(model.getActualPCB());
+                
+                model.setActualStorage(model.getDispatcher().manageStorage(model.getActualStorage()));
+                //writeBlockMemory();
             }
+            
             model.setActualPCB(nextPcb);
             
             
@@ -162,20 +295,58 @@ public class ControllerRegisters implements ActionListener {
             
             model.flagExec = true;
             model.setUserInsToMemo();
-            writeBlockMemory();
+
             view.codeArea.setText(getText(nextPcb.getLines()));
             
-            model.restartStorage();
-            model.getActualStorage().fillStorage(model.getDispatcher());
+            //model.restartStorage();
+            //model.getActualStorage().fillStorage(model.getDispatcher());
+            writeBlockMemory();
             view.storageBlock.setText(model.getActualStorage().storageToString());
+            
+            
+            startTime = LocalDateTime.now();
+            
         } else {
-            JOptionPane.showMessageDialog(null, "All process has been executed", "Success", JOptionPane.INFORMATION_MESSAGE);
-            view.automaticExec.setEnabled(true);
+
             
-            model.restartStorage();
-            model.getActualStorage().fillStorage(model.getDispatcher());
+            isAuto = false;
+
+            view.consoleBlock.append(model.getMsgError());
+            model.setMsgError("\n>> Process finished successfully. " + "\n");
+            endTime = LocalDateTime.now();
+            Duration duration = Duration.between(startTime, endTime);
+            view.consoleBlock.append(String.format(">> Execution time: %02d:%02d seconds\n\n",
+            duration.toMinutesPart(), duration.toSecondsPart()));
+            
+            view.consoleBlock.append("\n>> All process has been executed. " + "\n\n");
+            
+            model.getActualPCB().setStartTime(startTime);
+            model.getActualPCB().setEndTime(endTime);
+            
+            
+            model.getActualPCB().setState("Finished");
+            model.getDispatcher().updatePCBS(model.getActualPCB());
+            model.getDispatcher().updateStates();
+            model.setMemory(model.getDispatcher().manageMemo(model.getMemory()));
+            
+            
+            writeBlockMemory();
+            
+            //model.restartStorage();
+            model.getActualStorage().addToStorage(model.getActualPCB());
             view.storageBlock.setText(model.getActualStorage().storageToString());
             
+            
+            view.stepsExec.setEnabled(false);
+            view.automaticExec.setEnabled(false);
+            
+            view.setStorage.setEnabled(true);
+            view.setMemory.setEnabled(true);
+            
+            showProcessStatistics();
+            model.setActualPCB(null);
+            stopAutomaticExecution();
+
         }
     }
     
@@ -191,16 +362,25 @@ public class ControllerRegisters implements ActionListener {
     
     public void writeBlockMemory() {
         Instruction[] memoTemp = model.getMemory().getMemoryInstrucs();
-        String text = "BCP SPACE USED BY BCP " + String.valueOf(model.getActualPCB().getPCBID()) + "\n\n";
+        
+        String text = "";
         int indexUs = model.getMemory().getIndexUser();
+        int indexTemp = 0;
     
-        for (int i = 1; i < model.getMemorySize(); i++) {
+        for (int i = 0; i < model.getMemorySize(); i++) {
+            if (indexTemp < indexUs) {
+                if (memoTemp[i] != null && model.getDispatcher().searchPCB(memoTemp[i].getActualPCBID()) != null && !model.getDispatcher().searchPCB(memoTemp[i].getActualPCBID()).getState().equals("Finished")) {
+                    PCB tempPCB = model.getDispatcher().searchPCB(memoTemp[i].getActualPCBID());
+                    text = text + ("Storage position: " + String.valueOf(indexTemp) + " || PCB with id: " + String.valueOf(tempPCB.getPCBID()) + " || State: " + tempPCB.getState() + " || located in: " + tempPCB.getPath()) + "\n\n"; 
+                    indexTemp++;
+                    continue;
+                } else {
+                    text = text + (String.valueOf(i) + " BCP empty space\n\n");
+                    continue;
+                }
+            }
             if (memoTemp[i] != null) {
                 text = text + String.valueOf(i) + " User instruction " + (memoTemp[i].getCompIns()) + "\n\n";
-                continue;
-            }
-            if (i <= indexUs) {
-                text = text + (String.valueOf(i) + " BCP empty space\n\n");
                 continue;
             }
             text = text + (String.valueOf(i) + " User empty space\n\n");
@@ -236,6 +416,30 @@ public class ControllerRegisters implements ActionListener {
             }
             view.textBox5.setText(value);
         }
+    }
+
+    public void showProcessStatistics() {
+        ArrayList<PCB> allPcbs = model.getDispatcher().getAllProcesses();
+        view.consoleBlock.append("Process Stadistics:\n");
+
+        for (PCB pcb : allPcbs) {
+            LocalDateTime startTimePCB = pcb.getStartTime();
+            LocalDateTime endTimePCB = pcb.getEndTime();
+
+            if (startTimePCB != null && endTimePCB != null) {
+                
+                Duration duration = Duration.between(startTimePCB, endTimePCB);
+
+                view.consoleBlock.append(String.format(
+                    "Process ID: %d | Start: %s | End: %s | Duration: %d seconds\n", 
+                    pcb.getPCBID(), 
+                    startTimePCB.toLocalTime(), 
+                    endTimePCB.toLocalTime(), 
+                    duration.getSeconds() 
+                ));
+            }
+        }
+        view.consoleBlock.append("\n");
     }
     
     public void cleanRegisters() {
