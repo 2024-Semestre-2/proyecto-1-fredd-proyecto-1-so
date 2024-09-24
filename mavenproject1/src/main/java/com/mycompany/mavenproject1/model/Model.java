@@ -62,12 +62,15 @@ public class Model {
         Instruction[] insProv = convertLinesToIns();
         memory.resetMemory();
         actualPCB.setSizeStack(0);
+        actualPCB.setStack(new ArrayList<>());
+        
         AX.setValue("0"); 
         BX.setValue("0"); 
         CX.setValue("0"); 
         DX.setValue("0"); 
         AC.setValue("0"); 
         actualInstrucString = "";
+        
         Instruction[] actualIns = memory.getMemoryInstrucs();
         int actualInd = memory.getActualIndexUser();
         
