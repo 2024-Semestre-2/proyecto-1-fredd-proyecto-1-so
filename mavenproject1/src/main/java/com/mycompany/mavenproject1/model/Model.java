@@ -61,6 +61,7 @@ public class Model {
     public void setUserInsToMemo() {
         Instruction[] insProv = convertLinesToIns();
         memory.resetMemory();
+        actualPCB.setSizeStack(0);
         AX.setValue("0"); 
         BX.setValue("0"); 
         CX.setValue("0"); 
@@ -324,6 +325,7 @@ public class Model {
 
                 actualPCB.addToStack(elementReg);
                 Thread.sleep(1000);
+                
             } else {
                 setActualPCB(actualPCB.clonePCB());
                 setMsgError("\nExecution error, stack overflow\n");
@@ -339,6 +341,7 @@ public class Model {
             } else {
                 getReg(value).setValue(actualPCB.getStack().get(actualPCB.getSizeStack() - 1));
                 actualPCB.getStack().remove(actualPCB.getSizeStack() - 1);
+                actualPCB.setSizeStack(actualPCB.getSizeStack() - 1);
             }
         } else if (instruction.toUpperCase().equals("PARAM")) {
             if (actualPCB.getSizeStack() < 6) {

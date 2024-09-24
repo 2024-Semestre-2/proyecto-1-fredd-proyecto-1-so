@@ -17,6 +17,7 @@ public class PCB {
     private String state = "New";
     
     private int PCBID = 0;
+    private int sizeStack = 0;
     
     private ArrayList<String> stack = new ArrayList<>();
     
@@ -44,11 +45,9 @@ public class PCB {
     
     public void addToStack(String value) {
         this.stack.add(value);
+        this.sizeStack++;
     }
     
-    public int getSizeStack() {
-        return stack.size();
-    }
 
     //Getters and setters
     public int getPCBID() {
@@ -177,7 +176,13 @@ public class PCB {
     public void setEndTime(LocalDateTime endTime) {
         this.endTime = endTime;
     }
+
+    public void setSizeStack(int sizeStack) {
+        this.sizeStack = sizeStack;
+    }
     
-    
+    public int getSizeStack() {
+        return this.sizeStack;
+    }
     
 }

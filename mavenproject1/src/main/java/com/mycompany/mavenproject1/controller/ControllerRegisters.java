@@ -365,14 +365,14 @@ public class ControllerRegisters implements ActionListener {
         
         String text = "";
         int indexUs = model.getMemory().getIndexUser();
-        int indexTemp = 0;
+        
     
         for (int i = 0; i < model.getMemorySize(); i++) {
-            if (indexTemp < indexUs) {
+            if (i < indexUs) {
                 if (memoTemp[i] != null && model.getDispatcher().searchPCB(memoTemp[i].getActualPCBID()) != null && !model.getDispatcher().searchPCB(memoTemp[i].getActualPCBID()).getState().equals("Finished")) {
                     PCB tempPCB = model.getDispatcher().searchPCB(memoTemp[i].getActualPCBID());
-                    text = text + ("Storage position: " + String.valueOf(indexTemp) + " || PCB with id: " + String.valueOf(tempPCB.getPCBID()) + " || State: " + tempPCB.getState() + " || located in: " + tempPCB.getPath()) + "\n\n"; 
-                    indexTemp++;
+                    text = text + ("Storage position: " + String.valueOf(i) + " || PCB with id: " + String.valueOf(tempPCB.getPCBID()) + " || State: " + tempPCB.getState() + " || located in: " + tempPCB.getPath()) + "\n\n"; 
+                    
                     continue;
                 } else {
                     text = text + (String.valueOf(i) + " BCP empty space\n\n");

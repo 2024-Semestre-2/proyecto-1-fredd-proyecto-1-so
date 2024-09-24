@@ -134,8 +134,8 @@ public class ControllerLoadFile implements ActionListener {
         String regexPush = "^PUSH\\s+" + registros + "$";
         String regexPop = "^POP\\s+" + registros + "$"; 
         String regexInt = "^INT\\s+\\d{2}H$";
-        String regexJmp = "^JMP\\s+-\\d+$"; 
-        String regexJeJne = "^(JE|JNE)\\s+-\\d+$"; 
+        String regexJmp = "^JMP\\s+[-+]\\d+$"; 
+        String regexJeJne = "^(JE|JNE)\\s+[-+]\\d+$";
         String regexParam = "^PARAM\\s+(\\d+,\\s*)*\\d+$"; 
 
         
