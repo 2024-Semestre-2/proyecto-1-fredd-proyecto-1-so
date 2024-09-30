@@ -20,6 +20,7 @@ import javax.swing.Timer;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import javax.swing.SwingUtilities;
 
 /**
  *
@@ -29,7 +30,6 @@ public class ControllerRegisters implements ActionListener {
     private App view;
     private Model model;
     private String consoleInp = "";
-    private boolean isAuto = false;
     
     private ScheduledExecutorService executorService;
 
@@ -37,6 +37,10 @@ public class ControllerRegisters implements ActionListener {
     private LocalDateTime endTime;
     
 
+    private final Object consoleInputLock = new Object(); 
+    
+
+    
     public ControllerRegisters(App view, Model model) {
         this.view = view;
         this.model = model;
@@ -59,6 +63,7 @@ public class ControllerRegisters implements ActionListener {
     
     private void setupKeyListener() {
         clearKeyListeners();
+        
         view.consoleBlock.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -75,11 +80,14 @@ public class ControllerRegisters implements ActionListener {
         });
     }
     
+    
+    
     private void processConsoleInput() {
-        // Verifica que la entrada no esté vacía
+        
         if (!consoleInp.trim().isEmpty()) {
             view.consoleBlock.setEditable(false);
             model.flagInt09 = false;
+            
             //model.restartStorage();
             //model.getActualStorage().fillStorage(model.getDispatcher());
             writeBlockMemory();
@@ -88,10 +96,13 @@ public class ControllerRegisters implements ActionListener {
             model.getDX().setValue(consoleInp);
             checkRegisters();
 
-            if (isAuto) {
-                new Timer(3000, e -> {
-                startAutomaticExecution();
-                }).start();
+            if (model.isAutoExecuteOn()) {
+               
+                //startAutomaticExecution();
+                synchronized (consoleInputLock) {
+                    consoleInputLock.notify();  
+                }
+                
             } else {
                 new Timer(3000, e -> {
                 view.stepsExec.setEnabled(true);
@@ -112,9 +123,14 @@ public class ControllerRegisters implements ActionListener {
                 Logger.getLogger(ControllerRegisters.class.getName()).log(Level.SEVERE, null, ex);
             }
         } else if (source == view.automaticExec) {
-            handleAutoExec();
-        }
-        else {
+            new Thread(() -> {
+                try {
+                    handleAutoExec();
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(ControllerRegisters.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }).start();
+        } else {
             System.out.println("Event unknown.");
         }
     }
@@ -144,54 +160,56 @@ public class ControllerRegisters implements ActionListener {
     
     
     public void handleMoveExecAuto() throws InterruptedException {
-        
-        if (!isAuto) {
+        if (!model.isAutoExecuteOn()) {
             return;
         }
-        
+
         if (!model.flagExec) {
             prepareExec();
-            
         } else {
-
             checkRegisters();
             model.executionProgramSteps();
-            view.pcRegister.setText(String.valueOf(model.getActualInstruc()));
-            view.irRegister.setText(String.valueOf(model.getActualInstrucString()));
-            view.automaticExec.setEnabled(false);
-            
-            
+
+            // Actualizar la interfaz gráfica en el hilo de eventos de Swing
+            SwingUtilities.invokeLater(() -> {
+                view.pcRegister.setText(String.valueOf(model.getActualInstruc()));
+                view.irRegister.setText(String.valueOf(model.getActualInstrucString()));
+                view.automaticExec.setEnabled(false);
+            });
+
             if (model.flagInt10) {
-                view.consoleBlock.append(">> Element in DX: " + model.getDX().getValue() + "\n\n");
+                SwingUtilities.invokeLater(() -> {
+                    view.consoleBlock.append(">> Element in DX: " + model.getDX().getValue() + "\n\n");
+                    writeBlockMemory();
+                    view.memoryBlock.setCaretPosition(0);
+                });
                 model.flagInt10 = false;
-                //model.restartStorage();
-                //model.getActualStorage().fillStorage(model.getDispatcher());
-                writeBlockMemory();
-                view.memoryBlock.setCaretPosition(0);
-                
                 Thread.sleep(3000);
             } else if (model.flagInt09) {
-                view.consoleBlock.append(">> Write a number between 0-255: \n");
-                view.consoleBlock.setEditable(true);
-                view.stepsExec.setEnabled(false);
+                SwingUtilities.invokeLater(() -> {
+                    view.consoleBlock.append(">> Write a number between 0-255: \n");
+                    view.consoleBlock.setEditable(true);
+                    view.stepsExec.setEnabled(false);
+                    view.consoleBlock.append("\n\n");
+                });
 
-                stopAutomaticExecution();
-                // Espera hasta que el usuario presione Enter
+                synchronized (consoleInputLock) {
+                    consoleInputLock.wait();  
+                }
                 setupKeyListener();
-                view.consoleBlock.append("\n\n");
-
             } else {
                 model.getActualPCB().setState("Executing");
                 model.getDispatcher().updatePCBS(model.getActualPCB());
                 model.getDispatcher().updateStates();
 
-                //model.restartStorage();
-                //model.getActualStorage().fillStorage(model.getDispatcher());
-                view.storageBlock.setText(model.getActualStorage().storageToString());
-                writeBlockMemory();
+                SwingUtilities.invokeLater(() -> {
+                    view.storageBlock.setText(model.getActualStorage().storageToString());
+                    writeBlockMemory();
+                });
             }
         }
     }
+
 
     
     public void handleMoveExec() throws InterruptedException {
@@ -239,9 +257,13 @@ public class ControllerRegisters implements ActionListener {
     }
     
     
-    public void handleAutoExec() {
-        isAuto = true;
-        startAutomaticExecution();
+    public void handleAutoExec() throws InterruptedException {
+        model.setAutoExecuteOn(true);
+        
+        while (model.isAutoExecuteOn()) {
+            handleMoveExecAuto();
+        }
+        //startAutomaticExecution();
     }
     
     public void checkRegisters() {
@@ -309,7 +331,7 @@ public class ControllerRegisters implements ActionListener {
         } else {
 
             
-            isAuto = false;
+            model.setAutoExecuteOn(false);
 
             view.consoleBlock.append(model.getMsgError());
             model.setMsgError("\n>> Process finished successfully. " + "\n");

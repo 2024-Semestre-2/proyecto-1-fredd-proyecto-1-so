@@ -29,6 +29,9 @@ public class Model {
     public boolean flagExec = false;
     public boolean flagInt10 = false;
     public boolean flagInt09 = false;
+    
+    
+    public boolean autoExecuteOn = false;
 
     
     Dispatcher dispatcher = new Dispatcher();
@@ -609,5 +612,15 @@ public class Model {
     public void setDispatcher(Dispatcher temp) {
         this.dispatcher = temp;
     }
+
+    public boolean isAutoExecuteOn() {
+        return autoExecuteOn;
+    }
+
+    public void setAutoExecuteOn(boolean autoExecuteOn) {
+        this.autoExecuteOn = autoExecuteOn;
+    }
+    
+    
     
 }
